@@ -28,7 +28,7 @@ function App() {
             <div className="flex items-center space-x-2">
               <ClipboardList className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
               <div>
-                <h1 className="text-xl font-semibold text-gray-800 dark:text-white">Flowthing Test Management</h1>
+                <h1 className="text-xl font-semibold text-gray-800 dark:text-white">FlowTM</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Streamline your testing workflow</p>
               </div>
             </div>
