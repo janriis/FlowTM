@@ -8,9 +8,8 @@ import NewSuiteForm from './NewSuiteForm';
 import { supabaseService } from '../services/supabaseService';
 import { useAuth } from '../contexts/AuthContext';
 import { labelService } from '../services/labelService';
-import LabelFilter from './labels/LabelFilter';
 
-export default function TestManagement() {
+export default function TestSuites() {
   const { user } = useAuth();
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [suites, setSuites] = useState<TestSuite[]>([]);
@@ -19,7 +18,6 @@ export default function TestManagement() {
   const [editingTestCase, setEditingTestCase] = useState<TestCase | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -83,7 +81,7 @@ export default function TestManagement() {
       setTestCases(transformedCases);
     } catch (error) {
       console.error('Error loading data:', error);
-      setError('Failed to load test management data. Please try again.');
+      setError('Failed to load test suites data. Please try again.');
       toast.error('Failed to load data');
     } finally {
       setLoading(false);
@@ -95,7 +93,8 @@ export default function TestManagement() {
     description: string,
     priority: 'high' | 'medium' | 'low',
     steps: Array<{ description: string; expectedResult: string }>,
-    labels: string[]
+    labels: string[],
+    suiteId?: string
   ) => {
     try {
       if (editingTestCase) {
@@ -136,6 +135,11 @@ export default function TestManagement() {
               test_case_id: newCase.id,
             }))
           );
+
+          // If a suite was selected, add the test case to it
+          if (suiteId) {
+            await supabaseService.addTestCaseToSuite(suiteId, newCase.id);
+          }
         }
 
         toast.success('Test case created successfully');
@@ -252,11 +256,6 @@ export default function TestManagement() {
 
   const availableLabels = labelService.getUniqueLabels([...suites, ...testCases]);
 
-  const filteredSuites = suites.filter(suite =>
-    selectedLabels.length === 0 ||
-    selectedLabels.some(label => suite.labels.includes(label))
-  );
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -283,13 +282,13 @@ export default function TestManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Test Management</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Test Suites</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">Organize and track your test cases</p>
         </div>
         <div className="flex space-x-3">
           <button
             onClick={() => setShowSuiteForm(true)}
-            className="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
           >
             <FolderPlus className="h-5 w-5 mr-2" />
             New Suite
@@ -300,22 +299,13 @@ export default function TestManagement() {
               setShowTestForm(true);
             }}
             disabled={suites.length === 0}
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <PlusCircle className="h-5 w-5 mr-2" />
             Add Test Case
           </button>
         </div>
       </div>
-
-      <LabelFilter
-        availableLabels={availableLabels}
-        selectedLabels={selectedLabels}
-        onSelectLabel={(label) => setSelectedLabels([...selectedLabels, label])}
-        onRemoveLabel={(label) =>
-          setSelectedLabels(selectedLabels.filter((l) => l !== label))
-        }
-      />
 
       {showTestForm && (
         <TestForm
@@ -326,6 +316,7 @@ export default function TestManagement() {
           }}
           editingTestCase={editingTestCase}
           availableLabels={availableLabels}
+          availableSuites={suites}
         />
       )}
 
@@ -338,14 +329,14 @@ export default function TestManagement() {
       )}
 
       <div className="space-y-4">
-        {filteredSuites.length === 0 ? (
+        {suites.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <FolderPlus className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Test Suites Yet</h3>
             <p className="text-gray-500 dark:text-gray-400">Create a test suite to start organizing your test cases.</p>
           </div>
         ) : (
-          filteredSuites.map(suite => (
+          suites.map(suite => (
             <TestSuiteComponent
               key={suite.id}
               suite={suite}
